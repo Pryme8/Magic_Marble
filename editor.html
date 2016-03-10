@@ -237,7 +237,7 @@
 		
 	}
 	
-	var sMenu = $("<sMenu>"+
+	var sMenu = "<sMenu>"+
 	"<label for='object-name'>name</label>"+
 	"<input id='object-name' /><BR />"+
 	"Position<BR />"+
@@ -258,7 +258,7 @@
 	"<div id='shapePoints'></div>"+
 	"Path<BR />"+
 	"<div id='pathPoints'></div>"+
-	"</sMenu>");
+	"</sMenu>";
 	
 	var point = "<point>"+
 	"<label for='point-position-x'>X:</label>"+
@@ -270,7 +270,8 @@
 	"</point>";
 	
 	editor.prototype._objectSettings = function(){
-			var newSmenu = sMenu;
+			$('sMenu').remove();
+			var newSmenu = $(sMenu);
 			var parent = this;
 			$('body').append(newSmenu);
 			newSmenu.children('input#object-name').val(this.activeObject.name);
@@ -427,6 +428,8 @@
 	var popUp = $("<pop></pop>")
 	
 	editor.prototype._newObject = function(){
+		
+		if(!$('pop').length){
 		var parent = this;
 		var newPop = popUp;
 		$('body').append(newPop);
@@ -437,10 +440,11 @@
 		
 		$('preview').bind('click', function(e){
 			var target = $(e.target);
-			newPop.remove();
+			newPop.html("").remove();
 			parent._createObject(target.attr('act'));
 	
 		});	
+		}
 		
 	}
 	
