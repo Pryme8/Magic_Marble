@@ -30,9 +30,14 @@
 		position:relative;
 		width:auto;
 		height:auto;
-		padding:0.1em 0.2em;
-		margin:0.2em;
-		background:#CC3300;
+		background:rgba(255,255,255,0);
+		
+		font-size:0.8em;
+		font-weight:bolder;
+		color:#F30;
+		border:1px solid #f30;
+		padding:0.01em 0.2em;
+		
 		cursor:pointer;
 		-webkit-border-radius: 5px;
 		border-radius: 5px;
@@ -111,6 +116,7 @@
 		z-index:10001;
 		width:auto;
 		height:auto;
+		max-height:100%;
 		left:0;
 		top:0;
 		background:white;		
@@ -142,7 +148,16 @@
 		display:block;
 		position:relative;
 		margin:0.2em;
-		border:solid 1px black;	
+		margin-top:0;margin-bottom:-1px;
+		padding-bottom:0.2em;
+		padding-top:0.2em;
+		border-bottom:solid 1px black;	
+		border-top:solid 1px black;	
+	}
+	
+	#shapePoints, #pathPoints{
+		max-height:200px;
+		overflow-y:scroll;	
 	}
 	
 </style>
@@ -152,6 +167,10 @@
     <div id='objectList'></div>
     <canvas id="renderCanvas"></canvas>
     <script>
+	
+	Array.prototype.insert = function (index, item) {
+  	this.splice(index, 0, item);
+	};
 	
 	ObjectTypes = {
 		platform: {
@@ -239,34 +258,34 @@
 	
 	var sMenu = "<sMenu>"+
 	"<label for='object-name'>name</label>"+
-	"<input id='object-name' /><BR />"+
+	"<input id='object-name' /><BR /><BR />"+
 	"Position<BR />"+
 	"<label for='offset-position-x'>X:</label>"+
 	"<input id='offset-position-x' class='small' />"+
 	"<label for='offset-position-y'>Y:</label>"+
 	"<input id='offset-position-y' class='small' />"+
 	"<label for='offset-position-z'>Z:</label>"+
-	"<input id='offset-position-z' class='small' /><BR />"+
+	"<input id='offset-position-z' class='small' /><BR /><BR />"+
 	"Rotation<BR />"+
 	"<label for='offset-rotation-x'>X:</label>"+
 	"<input id='offset-rotation-x' class='small' />"+
 	"<label for='offset-rotation-y'>Y:</label>"+
 	"<input id='offset-rotation-y' class='small' />"+
 	"<label for='offset-rotation-z'>Z:</label>"+
-	"<input id='offset-rotation-z' class='small' /><BR />"+
-	"Shape<BR />"+
-	"<div id='shapePoints'></div>"+
-	"Path<BR />"+
-	"<div id='pathPoints'></div>"+
+	"<input id='offset-rotation-z' class='small' /><BR /><BR />"+
+	"Shape - <action act='addNewShapePoint'>Add Point</action><BR />"+
+	"<div id='shapePoints'></div><BR />"+
+	"Path - <action act='addNewPathPoint'>Add Point</action><BR />"+
+	"<div id='pathPoints'></div><BR />"+
 	"</sMenu>";
 	
-	var point = "<point>"+
+	var point = "<point><action act='movePointUp'>UP</action>-<action act='movePointDown'>DOWN</action>-<action act='clonePoint'>CLONE</action>-<action act='deletePoint'>DELETE</action><BR />"+
 	"<label for='point-position-x'>X:</label>"+
 	"<input id='point-position-x' class='small' />"+
 	"<label for='point-position-y'>Y:</label>"+
 	"<input id='point-position-y' class='small' />"+
 	"<label for='point-position-z'>Z:</label>"+
-	"<input id='point-position-z' class='small' />"+
+	"<input id='point-position-z' class='small' /><BR />"+
 	"</point>";
 	
 	editor.prototype._objectSettings = function(){
@@ -339,6 +358,49 @@
 			});
 					
 			
+			
+			
+			//ACTION BINDINGS
+			$('sMenu action').bind('click',function(e){
+				var target = $(e.target);
+				if(target.attr('act') == 'addNewShapePoint'){
+				parent._addShapePoint();
+				}
+				
+				if(target.attr('act') == 'addNewPathPoint'){
+				parent._addPathPoint();
+				}
+				
+			});
+	}
+	
+	editor.prototype._addShapePoint = function(){
+		var obj = this.activeObject;
+			obj.shape.insert(1,new BABYLON.Vector3(obj.shape[0].x,obj.shape[0].y,obj.shape[0].z));
+			$('sMenu #shapePoints point#0').clone(true, true).insertAfter('sMenu #shapePoints point#0');
+			$.each($('sMenu #shapePoints point'), function(i){
+				$(this).attr('id', i); 
+			});
+			
+			this._createObject('update');	
+			
+	}
+	
+	editor.prototype._addPathPoint = function(){
+			var obj = this.activeObject;
+			obj.path.push(new BABYLON.Vector3(obj.path[obj.path.length-1].x,obj.path[obj.path.length-1].y,obj.path[obj.path.length-1].z));
+			console.log(obj.path);
+			var lastPoint = $('sMenu').find('#pathPoints point').length-1;
+			
+			$('sMenu').find('#pathPoints point#'+lastPoint).clone(true, true).insertAfter($('sMenu').find('#pathPoints point#'+lastPoint));
+			
+			//$('sMenu #pathPoints point#'+$('sMenu #pathPoints point').length-1).clone(true, true).insertAfter($('sMenu #pathPoints point#'+$('sMenu #pathPoints point').length-1));
+			$.each($('sMenu #pathPoints point'), function(i){
+				$(this).attr('id', i); 
+			});
+			
+			this._createObject('update');	
+			
 	}
 	
 	editor.prototype._updateActiveObjectPosition = function(){
@@ -356,17 +418,15 @@
 	}
 	
 	editor.prototype._updateActiveObjectShape = function(point){
-			this.activeObject.shape[point].x = $('sMenu #shapePoints point#'+point).children('input#point-position-x').val();
-			this.activeObject.shape[point].y = $('sMenu #shapePoints point#'+point).children('input#point-position-y').val();
-			this.activeObject.shape[point].z = $('sMenu #shapePoints point#'+point).children('input#point-position-z').val();
+			this.activeObject.shape[point].x = $('sMenu').find('#shapePoints point#'+point).children('input#point-position-x').val();
+			this.activeObject.shape[point].y = $('sMenu').find('#shapePoints point#'+point).children('input#point-position-y').val();
+			this.activeObject.shape[point].z = $('sMenu').find('#shapePoints point#'+point).children('input#point-position-z').val();
 			this.activeObject.shape[this.activeObject.shape.length-1] = this.activeObject.shape[0];
-			
 			this._createObject('update');
 	}
 	
 	editor.prototype._updateActiveObjectPath = function(point){
-		
-		this.activeObject.path[point] = new BABYLON.Vector3(parseFloat($('sMenu').find('#pathPoints point#'+point).children('input#point-position-x').val()),
+			this.activeObject.path[point] = new BABYLON.Vector3(parseFloat($('sMenu').find('#pathPoints point#'+point).children('input#point-position-x').val()),
 		parseFloat($('sMenu').find('#pathPoints point#'+point).children('input#point-position-y').val()),
 		parseFloat($('sMenu').find('#pathPoints point#'+point).children('input#point-position-z').val()));
 			console.log(this.activeObject.path);
