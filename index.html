@@ -1,0 +1,232 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Physics Experements</title>
+
+
+ <script src="babylon.js"></script>  
+ <script src="babylon.objFileLoader.js"></script>  
+  <script src="cannon.js"></script> 
+ 
+    <style>
+    html, body {
+        overflow: hidden;
+        width   : 100%;
+        height  : 100%;
+        margin  : 0;
+        padding : 0;
+    }
+
+    #renderCanvas {
+        width   : 100%;
+        height  : 100%;
+        touch-action: none;
+    }
+</style>
+</head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+    <script>
+
+    window.addEventListener('DOMContentLoaded', function() {
+        var canvas = document.getElementById('renderCanvas');
+		var engine = new BABYLON.Engine(canvas, true);
+	Stage = function(scene){
+		this.scene = scene;
+		this.level = Stage.Stages['Test'];
+		this._buildLevel();
+	};
+	
+	Stage.prototype._buildLevel = function(){
+	
+	for(var i = 0; i < Object.keys(this.level.objects).length; i++){
+						var obj = Object.keys(this.level.objects)[i];
+							obj = this.level.objects[obj];
+							
+							obj.MESH = BABYLON.Mesh.ExtrudeShape("stage_shape", obj.shape, obj.path, 1, 0, BABYLON.Mesh.CAP_ALL, this.scene, false, BABYLON.Mesh.DOUBLESIDE)
+							//obj.MESH = BABYLON.Mesh.ExtrudeShapeCustom("stage_shape", obj.shape, obj.path, obj.scale, obj.rotation, false, false, 3, this.scene);
+							obj.MESH.material = new BABYLON.StandardMaterial("stage_mat", this.scene);
+							obj.MESH.diffuseColor = new BABYLON.Color3(obj.color.r,obj.color.g,obj.color.b);
+							obj.MESH.material.backFaceCulling = false;
+							obj.MESH.position.x += obj.offset.x;
+							obj.MESH.position.y += obj.offset.y;
+							obj.MESH.position.z += obj.offset.z;							
+							
+							obj.MESH.body = obj.MESH.setPhysicsState(BABYLON.PhysicsEngine.MeshImpostor , { mass: 0, friction: obj.friction, restitution: obj.restitution });
+	}
+
+	
+	}
+	
+	
+	Stage.Stages = {
+		Test : {
+			objects : {
+				startPad:{
+					shape : [new BABYLON.Vector3(3,3,0),new BABYLON.Vector3(3,-3,0),new BABYLON.Vector3(-3,-3,0),new BABYLON.Vector3(-3,3,0),new BABYLON.Vector3(3,3,0)],
+					path : [new BABYLON.Vector3(0,0,0),new BABYLON.Vector3(0,1,0)],	
+					offset : {x:0,y:-1,z:0},
+					scale : function() {
+						var scale = 1;
+						return scale;
+						},
+					rotation : function() {
+						return 0;
+						},		
+					color : {r:0.6,g:0.7,b:0.6},
+					friction : 0.6,
+					restitution : 0.5
+				},
+				section1:{
+					shape : [
+					new BABYLON.Vector3(-1,0.5,0),
+					new BABYLON.Vector3(1,0.5,0),
+					new BABYLON.Vector3(1,0,0),
+					new BABYLON.Vector3(-1,0,0),
+					new BABYLON.Vector3(-1,0.5,0)],
+					path : [new BABYLON.Vector3(0,0,0),new BABYLON.Vector3(0,0,-4), new BABYLON.Vector3(0,-2,-6), new BABYLON.Vector3(0,-2,-8),new BABYLON.Vector3(0,0,-12)],	
+					offset : {x:0,y:-0.5,z:-3},
+					scale : function() {
+						var scale = 1;
+						return scale;
+						},
+					rotation : function() {
+						return 0;
+						},		
+					color : {r:0.6,g:0.7,b:0.6},
+					friction : 0.6,
+					restitution : 0.5
+				},
+			}
+			
+			
+		}
+	};
+var createScene = function() {
+
+    // create a basic BJS Scene object
+    var scene = new BABYLON.Scene(engine);
+
+	var gravity = new BABYLON.Vector3(0, -1.8, 0);
+	scene.enablePhysics(gravity, new BABYLON.CannonJSPlugin());
+	scene.collisionsEnabled = true;
+	scene.workerCollisions = true;
+
+	var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0), scene);
+  light.intensity = 0.7;
+	
+	
+
+    var camera = new BABYLON.FollowCamera("FollowCam", new BABYLON.Vector3(0, 15, 45), scene);
+    
+	camera.radius = 15; // how far from the object to follow
+	camera.heightOffset = 6; // how high above the object to place the camera
+	camera.rotationOffset = 0; // the viewing angle
+	camera.cameraAcceleration = 0.05 // how fast to move
+	camera.maxCameraSpeed = 20 // speed limit
+	
+	camera.spinAccel = 1;
+	
+		var sphere = BABYLON.Mesh.CreateSphere("Sphere0", 16, 1, scene);
+		var insideSphere = BABYLON.Mesh.CreateSphere("inside_Sphere", 16, 0.5, scene);
+		var sphere_mat = new BABYLON.StandardMaterial("sphere_mat", scene);
+		
+		sphere.material = sphere_mat;
+		//sphere.material.alpha = 0.3;
+    
+       sphere.position = new BABYLON.Vector3(0, 3, 0);
+	   insideSphere.position = sphere.position;
+
+		sphere.setPhysicsState(BABYLON.PhysicsEngine.SphereImpostor, {move:true, mass: 6, friction: 0.4, restitution: 0.2 });
+		sphere.refreshBoundingInfo();
+		
+	camera.target = insideSphere;
+	insideSphere.isVisible = false;
+
+	scene.activeCamera = camera;
+	 var keys = {}
+	 keys.up = false, keys.down = false, keys.left = false, keys.right = false;
+	function onKeyDown(evt) {
+    switch (evt.keyCode){
+		case 37: // left
+		keys.left = true;
+		break;
+		case 39: //right
+		keys.right = true;
+		break;
+		case 38: //up
+		keys.up = true;
+		break;
+		case 40: //down
+		keys.down = true;
+		break;	
+	}
+	}
+		function onKeyUp(evt) {
+    switch (evt.keyCode){
+		case 37: // left
+		keys.left = false;
+		break;
+		case 39: //right
+		keys.right = false;
+		break;
+		case 38: //up
+		keys.up = false;
+		break;
+		case 40: //down
+		keys.down = false;
+		break;	
+	}
+	}
+	
+	window.addEventListener("keydown", onKeyDown);
+	window.addEventListener("keyup", onKeyUp);
+	
+	scene.registerBeforeRender(function(){
+		insideSphere.position = sphere.position;
+		
+		var forward = scene.activeCamera.position.subtract(sphere.position).normalize();
+		forward.y = 0;
+		
+		if(keys.up){
+			sphere.applyImpulse(forward.scale(-1), sphere.position);
+		}else if(keys.down){
+			sphere.applyImpulse(forward.scale(1), sphere.position);
+		}
+		
+		if(keys.left){
+			camera.spinAccel += 0.1;
+			camera.rotationOffset -= camera.spinAccel;	
+		}else if(keys.right){
+			camera.spinAccel += 0.1;
+			camera.rotationOffset += camera.spinAccel;			
+		}
+		
+		if(!keys.left && !keys.right){camera.spinAccel = 1}
+			
+	});
+
+	var newStage = new Stage(scene);
+    // return the created scene
+    return scene;
+}
+
+var scene = createScene();
+
+engine.runRenderLoop(function() {
+    scene.render();
+});
+
+
+//ALWAYS LISTEN FOR RESIZE!
+window.addEventListener('resize', function() {
+    engine.resize();
+});
+
+    });
+</script>
+    
+</body>
+</html>
+

@@ -1,0 +1,557 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Physics Experements</title>
+<script src="./jquery-2.2.1.min.js"></script> 
+	<script src="./cannon.js"></script> 
+ <script src="./babylon.js"></script>  
+ <script src="./babylon.objFileLoader.js"></script>  
+  
+ 
+    <style>
+    html, body {
+        overflow: hidden;
+        width   : 100%;
+        height  : 100%;
+        margin  : 0;
+        padding : 0;
+		font-family:"Lucida Console", Monaco, monospace;
+    }
+
+    #renderCanvas {
+        width   : 100%;
+        height  : 100%;
+        touch-action: none;
+	}
+	
+	action{
+		display:inline-block;
+		position:relative;
+		width:auto;
+		height:auto;
+		padding:0.1em 0.2em;
+		margin:0.2em;
+		background:#CC3300;
+		cursor:pointer;
+		-webkit-border-radius: 5px;
+		border-radius: 5px;
+		-webkit-user-select: none;  /* Chrome all / Safari all */
+  -moz-user-select: none;     /* Firefox all */
+  -ms-user-select: none;      /* IE 10+ */
+ 	 user-select: none;          /* Likely future */ 
+	   text-shadow:
+	
+	/*BLACK STROKE */
+	0px 1px 0 #000,  
+    0px -1px 0 #000,
+    1px 0px 0 #000,
+    -1px 0px 0 #000,
+   	1px 1px 0 #000,  
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    -1px -1px 0 #000;
+	-webkit-transition: all 0.35s; /* Safari */
+    transition: all 0.35s;
+	 
+	}
+	
+	#addObject{
+		position:absolute;
+		z-index:1001;
+		background:rgba(255,255,255,0);
+		right:3px;
+		bottom:3px;
+		font-size:32px;
+		font-weight:bolder;
+		color:#F30;
+		border:1px solid #f30;
+		padding:0.01em 0.2em;
+		
+	}
+	
+	#addObject span{
+		font-weight:normal;
+		font-size:14px;
+		vertical-align:middle;
+	}
+	
+	#addObject:hover{
+			background:rgba(255,255,255,0.2);
+	}
+	#addObject:active{
+			background:rgba(255,255,255,0.8);
+	}
+	
+	pop{
+	display:block;
+	position:absolute;
+	width:auto;
+	max-width:80%;
+	height:auto;
+	max-height:80%;
+	top:50%;
+	left:50%;
+	transform:translate(-50%,-50%);
+	margin:0.2em;
+	padding:0.2em;
+	background:white;	
+	}
+	preview{
+	display:inline-block;
+	position:relative;
+	margin:0.2em;
+	padding:0.2em;
+	border:solid 1px black;
+	cursor:pointer;		
+	}
+	sMenu{
+		display:block;
+		position:absolute;
+		z-index:10001;
+		width:auto;
+		height:auto;
+		left:0;
+		top:0;
+		background:white;		
+	}
+	
+	#objectList{
+	position:absolute;
+		width: 90px;
+		height:auto;
+		right:0;
+		top:0;
+		background:white;
+	}
+	item{
+		display:block;
+		position:relative;
+		width:90%;
+		text-align:center;
+		padding:0.2em;
+		margin:0.1em;
+		height:auto;
+		border:solid 1px black;		
+		cursor:pointer;	
+	}
+	.small{
+		width:40px;	
+	}
+	point{
+		display:block;
+		position:relative;
+		margin:0.2em;
+		border:solid 1px black;	
+	}
+	
+</style>
+</head>
+<body>
+	<action id="addObject" act="addObject">&#10010;<span>&nbsp;Add Object</span></action>
+    <div id='objectList'></div>
+    <canvas id="renderCanvas"></canvas>
+    <script>
+	
+	ObjectTypes = {
+		platform: {
+		name : "platform",
+		type : "basic_extrude",
+		shape : [new BABYLON.Vector3(3,3,0),new BABYLON.Vector3(3,-3,0),new BABYLON.Vector3(-3,-3,0),new BABYLON.Vector3(-3,3,0),new BABYLON.Vector3(3,3,0)],
+		path : [new BABYLON.Vector3(0,0,0),new BABYLON.Vector3(0,1,0)],
+		scale : 1,
+		rotation : 0,		
+		offset : {
+			position: {x:0,y:0,z:0},
+			rotation: {x:0,y:0,z:0}
+		}
+		},
+		path: {
+		name : "path",
+		type : "basic_extrude",
+		shape : [new BABYLON.Vector3(-1,0.5,0),new BABYLON.Vector3(1,0.5,0),new BABYLON.Vector3(1,0,0),	new BABYLON.Vector3(-1,0,0), new BABYLON.Vector3(-1,0.5,0)],
+					path : [new BABYLON.Vector3(0,0,0),new BABYLON.Vector3(0,0,-4), new BABYLON.Vector3(0,0,-6)],
+		scale : 1,
+		rotation : 0,		
+		offset : {
+			position: {x:0,y:0,z:0},
+			rotation: {x:0,y:0,z:0}
+		}
+		}
+		
+	}
+	
+	editor = function(scene){
+		this.scene = scene	
+		this.objectList = [];
+		this.activeObject = null;
+		this.gizmos = null;
+		this._init();
+	}
+	
+	editor.prototype._init = function(){
+		var gridMat = new BABYLON.StandardMaterial("gridMat", this.scene);
+			gridMat.emissiveColor  = new BABYLON.Color3(0.6, 0.6, 0.6);
+  			gridMat.backFaceCulling = false;
+			gridMat.wireframe = true;
+			gridMat.alpha = 0.2;
+		
+		  	this.grid = BABYLON.Mesh.CreateGround("grid", 100, 100, 10, this.scene);
+  			this.grid.material = gridMat;
+		
+		//BINDINGS
+		var parent = this;
+		$('action').bind('click', function(e){
+			var target = $(e.target);
+			switch (target.attr('act')){
+				case "addObject":
+					parent._newObject();
+				break;	
+			}
+		});	
+		
+		$('#objectList').bind('click', function(e){
+			var target = $(e.target);
+			if(target.attr('id') == "item"){
+				if(parent.activeObject != parent.objectList[target.attr('i')]){
+					parent.activeObject = parent.objectList[target.attr('i')];
+					parent._objectSelect();
+					
+				}
+			}
+		});	
+		
+	
+	/*window.addEventListener("click", function () {
+   var pickResult = parent.scene.pick(parent.scene.pointerX, parent.scene.pointerY);
+   	if(pickResult && pickResult.pickedMesh.id != "grid" && this.activeObject != pickResult){
+		parent.objectSelect(pickResult)};
+	});*/
+	}
+	
+	
+	editor.prototype._objectSelect = function(){
+
+			this.objectSettings();
+			this._updateGizmos();
+		
+	}
+	
+	var sMenu = $("<sMenu>"+
+	"<label for='object-name'>name</label>"+
+	"<input id='object-name' /><BR />"+
+	"Position<BR />"+
+	"<label for='offset-position-x'>X:</label>"+
+	"<input id='offset-position-x' class='small' />"+
+	"<label for='offset-position-y'>Y:</label>"+
+	"<input id='offset-position-y' class='small' />"+
+	"<label for='offset-position-z'>Z:</label>"+
+	"<input id='offset-position-z' class='small' /><BR />"+
+	"Rotation<BR />"+
+	"<label for='offset-rotation-x'>X:</label>"+
+	"<input id='offset-rotation-x' class='small' />"+
+	"<label for='offset-rotation-y'>Y:</label>"+
+	"<input id='offset-rotation-y' class='small' />"+
+	"<label for='offset-rotation-z'>Z:</label>"+
+	"<input id='offset-rotation-z' class='small' /><BR />"+
+	"Shape<BR />"+
+	"<div id='shapePoints'></div>"+
+	"Path<BR />"+
+	"<div id='pathPoints'></div>"+
+	"</sMenu>");
+	
+	var point = "<point>"+
+	"<label for='point-position-x'>X:</label>"+
+	"<input id='point-position-x' class='small' />"+
+	"<label for='point-position-y'>Y:</label>"+
+	"<input id='point-position-y' class='small' />"+
+	"<label for='point-position-z'>Z:</label>"+
+	"<input id='point-position-z' class='small' />"+
+	"</point>";
+	
+	editor.prototype.objectSettings = function(){
+			var newSmenu = sMenu;
+			var parent = this;
+			$('body').append(newSmenu);
+			newSmenu.children('input#object-name').val(this.activeObject.name);
+			newSmenu.children('input#object-name').bind('change', function(){
+				parent.activeObject.name = $(this).val();
+				parent._updateObjectList();
+			});
+			
+			newSmenu.children('input#offset-position-x').val(this.activeObject.offset.position.x);
+			newSmenu.children('input#offset-position-y').val(this.activeObject.offset.position.y);
+			newSmenu.children('input#offset-position-z').val(this.activeObject.offset.position.z);
+			newSmenu.children('input#offset-position-x, input#offset-position-y, input#offset-position-z').bind('change', function(){
+				parent.activeObject.offset.position = {x:newSmenu.children('input#offset-position-x').val(),y:newSmenu.children('input#offset-position-y').val(),z:newSmenu.children('input#offset-position-z').val()};
+				parent._updateActiveObjectPosition();
+			});
+			
+			newSmenu.children('input#offset-rotation-x').val(this.activeObject.offset.rotation.x);
+			newSmenu.children('input#offset-rotation-y').val(this.activeObject.offset.rotation.y);
+			newSmenu.children('input#offset-rotation-z').val(this.activeObject.offset.rotation.z);
+			newSmenu.children('input#offset-rotation-x, input#offset-rotation-y, input#offset-rotation-z').bind('change', function(){
+				parent.activeObject.offset.rotation = {x:newSmenu.children('input#offset-rotation-x').val(),y:newSmenu.children('input#offset-rotation-y').val(),z:newSmenu.children('input#offset-rotation-z').val()};
+				parent._updateActiveObjectRotation();
+			});
+			
+			
+			//SHAPE
+			for(var i =0; i<parent.activeObject.shape.length; i++ ){
+				var newPoint = $(point);
+				newPoint.appendTo(newSmenu.children('#shapePoints'));			
+				newPoint.attr('id', i);
+				newPoint.children('input#point-position-x').val(parent.activeObject.shape[i].x);
+				newPoint.children('input#point-position-y').val(parent.activeObject.shape[i].y);
+				newPoint.children('input#point-position-z').val(parent.activeObject.shape[i].z);
+			}	
+			
+			newSmenu.children('#shapePoints').children("point").children("input").bind('change', function(){
+				
+				var fX,fY,fZ;
+				
+				fX = newSmenu.children('#shapePoints').children("point#0").children('input#point-position-x').val();
+				fY = newSmenu.children('#shapePoints').children("point#0").children('input#point-position-y').val();
+				fZ = newSmenu.children('#shapePoints').children("point#0").children('input#point-position-z').val();
+								
+				newSmenu.children('#shapePoints').children('point:last-child').children('input#point-position-x').val(fX);
+				newSmenu.children('#shapePoints').children('point:last-child').children('input#point-position-y').val(fY);
+				newSmenu.children('#shapePoints').children('point:last-child').children('input#point-position-z').val(fZ);
+				
+				
+				parent._updateActiveObjectShape($(this).parent().attr('id'));
+			});
+			
+			//PATH
+			
+			for(var i =0; i<parent.activeObject.path.length; i++ ){
+				var newPoint = $(point);
+				newPoint.appendTo(newSmenu.children('#pathPoints'));			
+				newPoint.attr('id', i);
+				newPoint.children('input#point-position-x').val(parent.activeObject.path[i].x);
+				newPoint.children('input#point-position-y').val(parent.activeObject.path[i].y);
+				newPoint.children('input#point-position-z').val(parent.activeObject.path[i].z);
+			}
+			
+			newSmenu.children('#pathPoints').children("point").children("input").bind('change', function(){			
+				parent._updateActiveObjectPath($(this).parent().attr('id'));
+			});
+					
+			
+	}
+	
+	editor.prototype._updateActiveObjectPosition = function(){
+			this.activeObject.MESH.position.x = this.activeObject.offset.position.x;
+			this.activeObject.MESH.position.y = this.activeObject.offset.position.y;
+			this.activeObject.MESH.position.z = this.activeObject.offset.position.z;	
+			this._updateGizmos();
+	}
+	
+	editor.prototype._updateActiveObjectRotation = function(){
+			this.activeObject.MESH.rotation.x = this.activeObject.offset.rotation.x;
+			this.activeObject.MESH.rotation.y = this.activeObject.offset.rotation.y;
+			this.activeObject.MESH.rotation.z = this.activeObject.offset.rotation.z;	
+			this._updateGizmos();
+	}
+	
+	editor.prototype._updateActiveObjectShape = function(point){
+			this.activeObject.shape[point].x = $('sMenu #shapePoints point#'+point).children('input#point-position-x').val();
+			this.activeObject.shape[point].y = $('sMenu #shapePoints point#'+point).children('input#point-position-y').val();
+			this.activeObject.shape[point].z = $('sMenu #shapePoints point#'+point).children('input#point-position-z').val();
+			this.activeObject.shape[this.activeObject.shape.length-1] = this.activeObject.shape[0];
+			
+			this._createObject('update');
+	}
+	
+	editor.prototype._updateActiveObjectPath = function(point){
+		
+		this.activeObject.path[point] = new BABYLON.Vector3(parseFloat($('sMenu').find('#pathPoints point#'+point).children('input#point-position-x').val()),
+		parseFloat($('sMenu').find('#pathPoints point#'+point).children('input#point-position-y').val()),
+		parseFloat($('sMenu').find('#pathPoints point#'+point).children('input#point-position-z').val()));
+			console.log(this.activeObject.path);
+			
+			this._createObject('update');
+	}
+	
+	
+	
+	editor.prototype._updateGizmos = function(){
+		var parent = this;
+		if(parent.gizmos == null){
+			parent.gizmos = {
+				transform : {
+						xAxis : {
+							path : BABYLON.Mesh.CreateLines("xAxis", [new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(1, 0, 0)], this.scene),
+							color : new BABYLON.Color3(1, 0, 0)
+								},
+						
+						yAxis : {
+							path : BABYLON.Mesh.CreateLines("yAxis", [new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(0, 1, 0)], this.scene),
+							color : new BABYLON.Color3(0, 1, 0)
+								},
+						zAxis : {
+							path : BABYLON.Mesh.CreateLines("zAxis", [new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(0, 0, 1)], this.scene),
+							color : new BABYLON.Color3(0, 0, 1)
+								},
+						
+						}, //END TRANSFORM GIZMO
+				}	
+				
+		
+		this.gizmos.transform.xAxis.path.color = this.gizmos.transform.xAxis.color;
+		this.gizmos.transform.yAxis.path.color = this.gizmos.transform.yAxis.color;
+		this.gizmos.transform.zAxis.path.color = this.gizmos.transform.zAxis.color;
+		this.gizmos.transform.xAxis.path.renderingGroupId = 1;
+		this.gizmos.transform.yAxis.path.renderingGroupId = 1;
+		this.gizmos.transform.zAxis.path.renderingGroupId = 1;
+		updateGiz();
+		
+		}else{//UPDATE GIZMO
+		updateGiz();
+		}
+		
+		function updateGiz(){
+		var offset = new BABYLON.Vector3(parent.activeObject.offset.position.x,parent.activeObject.offset.position.y,parent.activeObject.offset.position.z);
+		var rotation = new BABYLON.Vector3(parent.activeObject.offset.rotation.x,parent.activeObject.offset.rotation.y,parent.activeObject.offset.rotation.z);
+		parent.gizmos.transform.xAxis.path.position = offset;
+		parent.gizmos.transform.yAxis.path.position = offset;
+		parent.gizmos.transform.zAxis.path.position = offset;
+		parent.gizmos.transform.xAxis.path.rotation = rotation;
+		parent.gizmos.transform.yAxis.path.rotation = rotation;
+		parent.gizmos.transform.zAxis.path.rotation = rotation;	
+		}
+			
+	}
+	
+		
+	var popUp = $("<pop></pop>")
+	
+	editor.prototype._newObject = function(){
+		var parent = this;
+		var newPop = popUp;
+		$('body').append(newPop);
+		for(var i = 0; i < Object.keys(ObjectTypes).length; i++){
+			var type = Object.keys(ObjectTypes)[i];
+			newPop.append('<preview act="'+type+'">'+type+'</preview>');
+		}
+		
+		$('preview').bind('click', function(e){
+			var target = $(e.target);
+			newPop.remove();
+			parent._createObject(target.attr('act'));
+	
+		});	
+		
+	}
+	
+	editor.prototype._createObject = function(type){
+		
+		if(type!='update'){
+			var obj = $.extend(true, {}, ObjectTypes[type]);
+			
+				if(obj.type == 'basic_extrude'){
+					obj.MESH = BABYLON.Mesh.ExtrudeShape("stage_shape", obj.shape, obj.path, obj.scale, obj.rotation, BABYLON.Mesh.CAP_ALL, this.scene, false, BABYLON.Mesh.DOUBLESIDE);
+				}
+				
+				this.objectList.push(obj);
+				this._updateObjectList();
+		}else{
+			var obj = this.activeObject;
+			if(obj.type == 'basic_extrude'){
+			obj.MESH.dispose();
+			obj.MESH = BABYLON.Mesh.ExtrudeShape("stage_shape", obj.shape, obj.path, obj.scale, obj.rotation, BABYLON.Mesh.CAP_ALL, this.scene, false, BABYLON.Mesh.DOUBLESIDE);
+			}
+		}
+			
+	}
+	
+	editor.prototype._updateObjectList = function(){
+			var html = "";
+			var parent = this;
+			$.each(this.objectList,function(i){
+				html += "<item id='item' i='"+i+"'>"+
+				parent.objectList[i].name+
+				"</item>";
+			});
+			$('#objectList').html(html);
+		
+	}
+	
+	
+
+    window.addEventListener('DOMContentLoaded', function() {
+		
+        var canvas = document.getElementById('renderCanvas');
+		var engine = new BABYLON.Engine(canvas, true);
+	
+var createScene = function() {
+
+    // create a basic BJS Scene object
+    var scene = new BABYLON.Scene(engine);
+	E = new editor(scene);
+
+
+var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0), scene);
+  light.intensity = 0.7;
+
+	
+ // create a FreeCamera, and set its position to (x:0, y:5, z:-10)
+    var camera = new BABYLON.FreeCamera('camera1', new BABYLON.Vector3(5, 5,-5), scene);
+
+    // target the camera to scene origin
+    camera.setTarget(BABYLON.Vector3.Zero());
+
+    // attach the camera to the canvas
+    camera.attachControl(canvas, false);
+	scene.activeCamera = camera;
+	
+  /*
+	 // shape
+  var shape = [
+	 new BABYLON.Vector3(-1, 1, 0),
+	 new BABYLON.Vector3(1, 1, 0),
+	 new BABYLON.Vector3(1, -1, 0),
+	 new BABYLON.Vector3(-1, -1, 0),
+	 new BABYLON.Vector3(-1, 1, 0)
+  ];
+
+    
+  var path = [new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(0, 1, 0)];
+
+	var myScale = function(i, distance) {
+		var scale = 1;
+		return scale;
+	};
+    
+	var myRotation = function(i, distance) {
+		return 0;	
+	};
+	
+  var extruded = BABYLON.Mesh.ExtrudeShapeCustom("extruded", shape, path, myScale, myRotation, false, false, 3, scene);
+	  extruded.material = mat;
+
+	*/
+	
+	
+    // return the created scene
+    return scene;
+}
+
+var scene = createScene();
+
+engine.runRenderLoop(function() {
+    scene.render();
+});
+
+
+//ALWAYS LISTEN FOR RESIZE!
+window.addEventListener('resize', function() {
+    engine.resize();
+});
+
+    });
+</script>
+    
+</body>
+</html>
+
