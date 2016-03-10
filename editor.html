@@ -232,7 +232,7 @@
 	
 	editor.prototype._objectSelect = function(){
 
-			this.objectSettings();
+			this._objectSettings();
 			this._updateGizmos();
 		
 	}
@@ -269,7 +269,7 @@
 	"<input id='point-position-z' class='small' />"+
 	"</point>";
 	
-	editor.prototype.objectSettings = function(){
+	editor.prototype._objectSettings = function(){
 			var newSmenu = sMenu;
 			var parent = this;
 			$('body').append(newSmenu);
@@ -449,11 +449,18 @@
 		if(type!='update'){
 			var obj = $.extend(true, {}, ObjectTypes[type]);
 			
+			var newPos = this.scene.activeCamera.getFrontPosition(10);
+			obj.offset.position = {x:newPos.x,y:newPos.y,z:newPos.z};
+			
 				if(obj.type == 'basic_extrude'){
 					obj.MESH = BABYLON.Mesh.ExtrudeShape("stage_shape", obj.shape, obj.path, obj.scale, obj.rotation, BABYLON.Mesh.CAP_ALL, this.scene, false, BABYLON.Mesh.DOUBLESIDE);
 				}
-				
+								
 				this.objectList.push(obj);
+				this.activeObject = obj;
+				this._objectSettings();
+				this._updateActiveObjectPosition();
+				
 				this._updateObjectList();
 		}else{
 			var obj = this.activeObject;
