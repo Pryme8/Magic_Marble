@@ -194,6 +194,14 @@
   	this[b] = temp;
 	};
 	
+	gameSettings = {
+		state : "editor",
+		camera : {
+			sensitivity : {x:0.1,y:0.01},
+			max_rotateSpeed : {x:5,y:1},
+			pitch_limits : {mn:-8,mx:20},
+		}
+	}
 	
 	
 	ObjectTypes = {
@@ -360,6 +368,7 @@
 				$('sMenu').fadeOut(300);
 				$('#testLevel').fadeOut(300);
 				$('#addObject').fadeOut(300);
+				gameSettings.state = "play";
 				
 				}else{
 				alert('Need a Player Spawn, a Level Object and a Goal');	
@@ -927,47 +936,139 @@ var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0
 	
 	var actionCam = new BABYLON.FollowCamera("actionCam", new BABYLON.Vector3(0, 15, 45), scene);
     
-	actionCam.radius = 15; // how far from the object to follow
-	actionCam.heightOffset = 6; // how high above the object to place the camera
+	actionCam.radius = 8; // how far from the object to follow
+	actionCam.heightOffset = 5; // how high above the object to place the camera
 	actionCam.rotationOffset = 0; // the viewing angle
-	actionCam.cameraAcceleration = 0.05 // how fast to move
+	actionCam.cameraAcceleration = 0.075 // how fast to move
 	actionCam.maxCameraSpeed = 20 // speed limit
 	
 	actionCam.spinAccel = 1;
+	actionCam.pitchAccel = 0.1;
 	
 	scene.actionCam = actionCam;
 	scene.actionCam.target = BABYLON.Vector3.Zero();
 	
+	var keys = {}
+	 keys.up = false, keys.down = false, keys.left = false, keys.right = false;
+	function onKeyDown(evt) {
+    switch (evt.keyCode){
+		case 37: // left
+		keys.left = true;
+		break;
+		case 39: //right
+		keys.right = true;
+		break;
+		case 38: //up
+		keys.up = true;
+		break;
+		case 40: //down
+		keys.down = true;
+		break;	
+	}
+	}
+		function onKeyUp(evt) {
+    switch (evt.keyCode){
+		case 37: // left
+		keys.left = false;
+		break;
+		case 39: //right
+		keys.right = false;
+		break;
+		case 38: //up
+		keys.up = false;
+		break;
+		case 40: //down
+		keys.down = false;
+		break;	
+	}
+	}
 	
-  /*
-	 // shape
-  var shape = [
-	 new BABYLON.Vector3(-1, 1, 0),
-	 new BABYLON.Vector3(1, 1, 0),
-	 new BABYLON.Vector3(1, -1, 0),
-	 new BABYLON.Vector3(-1, -1, 0),
-	 new BABYLON.Vector3(-1, 1, 0)
-  ];
-
-    
-  var path = [new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(0, 1, 0)];
-
-	var myScale = function(i, distance) {
-		var scale = 1;
-		return scale;
-	};
-    
-	var myRotation = function(i, distance) {
-		return 0;	
-	};
+	window.addEventListener("keydown", onKeyDown);
+	window.addEventListener("keyup", onKeyUp);
 	
-  var extruded = BABYLON.Mesh.ExtrudeShapeCustom("extruded", shape, path, myScale, myRotation, false, false, 3, scene);
-	  extruded.material = mat;
-
-	*/
+	scene.registerBeforeRender(function(){
+		
+		if(gameSettings.state!='editor'){
+			
+			if(keys.left){
+			if(actionCam.spinAccel < gameSettings.camera.max_rotateSpeed.x){
+			actionCam.spinAccel += gameSettings.camera.sensitivity.x;
+			}else{
+			actionCam.spinAccel = gameSettings.camera.max_rotateSpeed.x;
+			}
+			actionCam.rotationOffset -= actionCam.spinAccel;	
+			}else if(keys.right){
+			if(actionCam.spinAccel < gameSettings.camera.max_rotateSpeed.x){
+			actionCam.spinAccel += gameSettings.camera.sensitivity.x;
+			}else{
+			actionCam.spinAccel = gameSettings.camera.max_rotateSpeed.x;
+			}
+			
+			actionCam.rotationOffset += actionCam.spinAccel;			
+			}
+			
+			if(!keys.left && !keys.right){actionCam.spinAccel = 1};
+			
+			if(keys.up){
+			if(actionCam.pitchAccel < gameSettings.camera.max_rotateSpeed.y){
+			actionCam.pitchAccel += gameSettings.camera.sensitivity.y;
+			}else{
+			actionCam.pitchAccel = gameSettings.camera.max_rotateSpeed.y;
+			}
+			if(actionCam.heightOffset < gameSettings.camera.pitch_limits.mx){
+			actionCam.heightOffset += actionCam.pitchAccel;	
+			}else{
+				actionCam.heightOffset = gameSettings.camera.pitch_limits.mx;
+			}
+			}else if(keys.down){
+			if(actionCam.pitchAccel < gameSettings.camera.max_rotateSpeed.y){
+			actionCam.pitchAccel += gameSettings.camera.sensitivity.y;
+			}else{
+			actionCam.pitchAccel = gameSettings.camera.max_rotateSpeed.y;
+			}
+			
+			if(actionCam.heightOffset > gameSettings.camera.pitch_limits.mn){
+			actionCam.heightOffset -= actionCam.pitchAccel;	
+			}else{
+				actionCam.heightOffset = gameSettings.camera.pitch_limits.mn;
+			}		
+			}
+			
+			if(!keys.up && !keys.down){actionCam.pitchAccel = 0.1};
+			
+		}
+		
+		
+	
+		
+		
+		
+		/*
+		
+		var forward = scene.activeCamera.position.subtract(sphere.position).normalize();
+		forward.y = 0;
+		
+		if(keys.up){
+			sphere.applyImpulse(forward.scale(-1), sphere.position);
+		}else if(keys.down){
+			sphere.applyImpulse(forward.scale(1), sphere.position);
+		}
+		
+		if(keys.left){
+			camera.spinAccel += 0.1;
+			camera.rotationOffset -= camera.spinAccel;	
+		}else if(keys.right){
+			camera.spinAccel += 0.1;
+			camera.rotationOffset += camera.spinAccel;			
+		}
+		
+		if(!keys.left && !keys.right){camera.spinAccel = 1}
+		*/
+			
+	});
 	
 	
-    // return the created scene
+	
     return scene;
 }
 
