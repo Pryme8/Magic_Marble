@@ -75,16 +75,30 @@
 		
 	}
 	
+	#testLevel{
+		position:absolute;
+		z-index:1001;
+		background:rgba(255,255,255,0);
+		right:140px;
+		bottom:3px;
+		font-size:16px;
+		font-weight:bolder;
+		color:#F30;
+		border:1px solid #f30;
+		padding:0.01em 0.2em;
+		
+	}
+	
 	#addObject span{
 		font-weight:normal;
 		font-size:14px;
 		vertical-align:middle;
 	}
 	
-	#addObject:hover{
+	#addObject:hover, #testLevel:hover{
 			background:rgba(255,255,255,0.2);
 	}
-	#addObject:active{
+	#addObject:active, #testLevel:active{
 			background:rgba(255,255,255,0.8);
 	}
 	
@@ -165,6 +179,7 @@
 </head>
 <body>
 	<action id="addObject" act="addObject">&#10010;<span>&nbsp;Add Object</span></action>
+    <action id="testLevel" act="testLevel">Test Level</action>
     <div id='objectList'></div>
     <canvas id="renderCanvas"></canvas>
     <script>
@@ -192,6 +207,13 @@
 		offset : {
 			position: {x:0,y:0,z:0},
 			rotation: {x:0,y:0,z:0}
+		},
+		physics :{
+				on : true,
+				mass : 0,
+				friction : 0.5,
+				restitution: 0.2,
+				imposter: BABYLON.PhysicsEngine.MeshImpostor,
 		}
 		},
 		path: {
@@ -204,6 +226,13 @@
 		offset : {
 			position: {x:0,y:0,z:0},
 			rotation: {x:0,y:0,z:0}
+		},
+		physics :{
+				on : true,
+				mass : 0,
+				friction : 0.5,
+				restitution: 0.2,
+				imposter: BABYLON.PhysicsEngine.MeshImpostor,
 		}
 		},
 		playerSpawn: {
@@ -219,11 +248,13 @@
 				mass : 1,
 				friction : 0.8,
 				restitution: 0.5,
+				imposter: BABYLON.PhysicsEngine.SphereImpostor,
 			}
 		},
 		goal: {
 			name : "GOAL! :D",
 			type : "particleSystem",
+			subtype : "goal",
 			size : 1,
 			offset : {
 			position: {x:0,y:0,z:0},
@@ -236,6 +267,13 @@
 				keys : [
 					{frame: 0,value:Math.PI},{frame: 30,value:Math.PI/-1}
 				],	
+			},
+			physics :{
+				on : false,
+				mass : 0,
+				friction : 0,
+				restitution: 0,
+				imposter: null,
 			}
 				
 		}
@@ -270,7 +308,10 @@
 			switch (target.attr('act')){
 				case "addObject":
 					parent._newObject();
-				break;	
+				break;
+				case "testLevel":
+					parent._testLevel();
+				break;
 			}
 		});	
 		
@@ -286,6 +327,46 @@
 		});	
 		
 	}
+	
+	
+	//BUILD LEVEL FOR TESTING
+	editor.prototype._testLevel = function(){
+		
+		var objectTrigger = false, goalTrigger = false;
+		var playerObj = null;
+		var parent = this;
+			$.each(parent.objectList, function(i){
+				if(parent.objectList[i].type == 'player'){playerObj = parent.objectList[i] };
+				if(parent.objectList[i].type == 'basic_extrude'){objectTrigger = true};
+				if(parent.objectList[i].type == 'particleSystem' && parent.objectList[i].subtype == 'goal'){goalTrigger = true};
+			});
+			
+			if(playerObj && objectTrigger && goalTrigger){
+				$.each(parent.objectList, function(i){
+					var obj = parent.objectList[i];
+						if(obj.physics.on){
+							obj.MESH.body = obj.MESH.setPhysicsState(obj.physics.imposter, { mass: obj.physics.mass, friction: obj.physics.friction, restitution: obj.physics.restitution });
+						}
+					
+				});
+				
+				parent.scene.actionCam.target = playerObj.MESH;
+				parent.scene.activeCamera = parent.scene.actionCam;
+				parent.grid.isVisible = false;
+				parent.gizmos.transform.xAxis.path.isVisible = false;
+				parent.gizmos.transform.yAxis.path.isVisible = false;
+				parent.gizmos.transform.zAxis.path.isVisible = false;
+				$('#objectList').fadeOut(300);
+				$('sMenu').fadeOut(300);
+				$('#testLevel').fadeOut(300);
+				$('#addObject').fadeOut(300);
+				
+				}else{
+				alert('Need a Player Spawn, a Level Object and a Goal');	
+				}
+	}
+	
+	//END BUILD LEVEL FOR TESTING
 	
 	
 	editor.prototype._objectSelect = function(){
@@ -668,7 +749,7 @@
 	}
 	
 	editor.prototype._updateGizmos = function(){
-		var parent = this;
+			var parent = this;
 		if(parent.gizmos == null){
 			parent.gizmos = {
 				transform : {
@@ -823,6 +904,11 @@ var createScene = function() {
     // create a basic BJS Scene object
     var scene = new BABYLON.Scene(engine);
 	E = new editor(scene);
+	
+	var gravity = new BABYLON.Vector3(0, -9.6, 0);
+	scene.enablePhysics(gravity, new BABYLON.CannonJSPlugin());
+	scene.collisionsEnabled = true;
+	scene.workerCollisions = true;
 
 
 var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0), scene);
@@ -838,6 +924,20 @@ var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0
     // attach the camera to the canvas
     camera.attachControl(canvas, false);
 	scene.activeCamera = camera;
+	
+	var actionCam = new BABYLON.FollowCamera("actionCam", new BABYLON.Vector3(0, 15, 45), scene);
+    
+	actionCam.radius = 15; // how far from the object to follow
+	actionCam.heightOffset = 6; // how high above the object to place the camera
+	actionCam.rotationOffset = 0; // the viewing angle
+	actionCam.cameraAcceleration = 0.05 // how fast to move
+	actionCam.maxCameraSpeed = 20 // speed limit
+	
+	actionCam.spinAccel = 1;
+	
+	scene.actionCam = actionCam;
+	scene.actionCam.target = BABYLON.Vector3.Zero();
+	
 	
   /*
 	 // shape
