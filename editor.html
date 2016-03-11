@@ -330,6 +330,21 @@
 	"<label for='player-size'>size:</label>"+
 	"<input id='player-size' class='small' /><BR />";
 	
+	var particleSystemMenu = "Position<BR />"+
+	"<label for='offset-position-x'>X:</label>"+
+	"<input id='offset-position-x' class='small' />"+
+	"<label for='offset-position-y'>Y:</label>"+
+	"<input id='offset-position-y' class='small' />"+
+	"<label for='offset-position-z'>Z:</label>"+
+	"<input id='offset-position-z' class='small' /><BR /><BR />"+
+	"Rotation<BR />"+
+	"<label for='offset-rotation-x'>X:</label>"+
+	"<input id='offset-rotation-x' class='small' />"+
+	"<label for='offset-rotation-y'>Y:</label>"+
+	"<input id='offset-rotation-y' class='small' />"+
+	"<label for='offset-rotation-z'>Z:</label>"+
+	"<input id='offset-rotation-z' class='small' /><BR /><BR />";
+	
 	var point = "<point><action act='movePointUp'>UP</action>-<action act='movePointDown'>DOWN</action>-<action act='clonePoint'>CLONE</action>-<action act='deletePoint'>DELETE</action><BR />"+
 	"<label for='point-position-x'>X:</label>"+
 	"<input id='point-position-x' class='small' />"+
@@ -349,7 +364,8 @@
 				parent.activeObject.name = $(this).val();
 				parent._updateObjectList();
 			});
-			if(this.activeObject.type == "basic_extrude"){
+		
+		if(this.activeObject.type == "basic_extrude"){
 			
 			newSmenu.append(basicExtrudeMenu);
 			
@@ -467,7 +483,7 @@
 		}
 		
 		if(this.activeObject.type == "player"){
-			
+						
 			newSmenu.append(playerMenu);
 			
 			newSmenu.children('input#offset-position-x').val(this.activeObject.offset.position.x);
@@ -483,9 +499,29 @@
 				parent.activeObject.size = newSmenu.children('input#player-size').val();
 				parent._updateActiveObjectSize();
 			});
-			
 		}
+		
+		if(this.activeObject.type == "particleSystem"){
 			
+			newSmenu.append(particleSystemMenu);
+			
+			newSmenu.children('input#offset-position-x').val(this.activeObject.offset.position.x);
+			newSmenu.children('input#offset-position-y').val(this.activeObject.offset.position.y);
+			newSmenu.children('input#offset-position-z').val(this.activeObject.offset.position.z);
+			newSmenu.children('input#offset-position-x, input#offset-position-y, input#offset-position-z').bind('change', function(){
+				parent.activeObject.offset.position = {x:newSmenu.children('input#offset-position-x').val(),y:newSmenu.children('input#offset-position-y').val(),z:newSmenu.children('input#offset-position-z').val()};
+				parent._updateActiveObjectPosition();
+			});
+			
+			newSmenu.children('input#offset-rotation-x').val(this.activeObject.offset.rotation.x);
+			newSmenu.children('input#offset-rotation-y').val(this.activeObject.offset.rotation.y);
+			newSmenu.children('input#offset-rotation-z').val(this.activeObject.offset.rotation.z);
+			newSmenu.children('input#offset-rotation-x, input#offset-rotation-y, input#offset-rotation-z').bind('change', function(){
+				parent.activeObject.offset.rotation = {x:newSmenu.children('input#offset-rotation-x').val(),y:newSmenu.children('input#offset-rotation-y').val(),z:newSmenu.children('input#offset-rotation-z').val()};
+				parent._updateActiveObjectRotation();
+			});
+		}
+		
 	}
 	
 	editor.prototype._addShapePoint = function(){
