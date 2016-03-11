@@ -368,7 +368,15 @@
 				$('sMenu').fadeOut(300);
 				$('#testLevel').fadeOut(300);
 				$('#addObject').fadeOut(300);
+				playerObj.MESH.body.grounded = false;
+				
+				playerObj.MESH.body.collisionResponse = 0;
+				playerObj.MESH.body.addEventListener("collide", function(e){ playerObj.MESH.body.grounded = true;
+				playerObj.MESH.body.collisionResponse = 1;
+				 } );
+				gameSettings.playerObject = playerObj.MESH;
 				gameSettings.state = "play";
+				
 				
 				}else{
 				alert('Need a Player Spawn, a Level Object and a Goal');	
@@ -914,6 +922,7 @@ var createScene = function() {
     var scene = new BABYLON.Scene(engine);
 	E = new editor(scene);
 	
+	console.log(new BABYLON.CannonJSPlugin());
 	var gravity = new BABYLON.Vector3(0, -9.6, 0);
 	scene.enablePhysics(gravity, new BABYLON.CannonJSPlugin());
 	scene.collisionsEnabled = true;
@@ -949,8 +958,9 @@ var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0
 	scene.actionCam.target = BABYLON.Vector3.Zero();
 	
 	var keys = {}
-	 keys.up = false, keys.down = false, keys.left = false, keys.right = false;
+	 keys.up = false, keys.down = false, keys.left = false, keys.right = false, keys.space = false;
 	function onKeyDown(evt) {
+		//console.log(evt.keyCode);
     switch (evt.keyCode){
 		case 37: // left
 		keys.left = true;
@@ -963,6 +973,9 @@ var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0
 		break;
 		case 40: //down
 		keys.down = true;
+		break;
+		case 32: //space
+		keys.space = true;
 		break;	
 	}
 	}
@@ -979,6 +992,9 @@ var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0
 		break;
 		case 40: //down
 		keys.down = false;
+		break;	
+		case 32: //space
+		keys.space = false;
 		break;	
 	}
 	}
@@ -1035,6 +1051,19 @@ var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0
 			}
 			
 			if(!keys.up && !keys.down){actionCam.pitchAccel = 0.1};
+			
+			
+			if(gameSettings.playerObject.body.collisionResponse){
+			gameSettings.playerObject.body.grounded = true;
+			}else{
+			gameSettings.playerObject.body.grounded = false;	
+			}
+			if(keys.space && gameSettings.playerObject.body.grounded){
+				gameSettings.playerObject.body.collisionResponse = 0;
+				var jumpVector = new BABYLON.Vector3(0,6.5,0);
+				gameSettings.playerObject.applyImpulse(jumpVector, gameSettings.playerObject.position);	
+					
+			}
 			
 		}
 		
