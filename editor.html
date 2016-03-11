@@ -114,9 +114,10 @@
 		display:block;
 		position:absolute;
 		z-index:10001;
-		width:auto;
+		width:260px;
 		height:auto;
 		max-height:100%;
+		overflow-y:auto;
 		left:0;
 		top:0;
 		background:white;		
@@ -171,6 +172,14 @@
 	Array.prototype.insert = function (index, item) {
   	this.splice(index, 0, item);
 	};
+	
+	Array.prototype.swap = function(a, b) {
+  	var temp = this[a];
+  	this[a] = this[b];
+  	this[b] = temp;
+	};
+	
+	
 	
 	ObjectTypes = {
 		platform: {
@@ -372,6 +381,45 @@
 				}
 				
 			});
+			
+			$('sMenu #shapePoints point action').bind('click',function(e){
+				var target = $(e.target);
+				if(target.attr('act') == 'movePointUp'){
+					parent._editShapePoint('up', $(target).parent().attr('id'));
+				}
+				
+				if(target.attr('act') == 'movePointDown'){
+					parent._editShapePoint('down', $(target).parent().attr('id'));
+				}
+				
+				if(target.attr('act') == 'clonePoint'){
+					parent._editShapePoint('clone', $(target).parent().attr('id'));
+				}
+				
+				if(target.attr('act') == 'deletePoint'){
+					parent._editShapePoint('delete', $(target).parent().attr('id'));
+				}
+			});
+			
+			$('sMenu #pathPoints point action').bind('click',function(e){
+				var target = $(e.target);
+				if(target.attr('act') == 'movePointUp'){
+					parent._editPathPoint('up', $(target).parent().attr('id'));
+				}
+				
+				if(target.attr('act') == 'movePointDown'){
+					parent._editPathPoint('down', $(target).parent().attr('id'));
+				}
+				
+				if(target.attr('act') == 'clonePoint'){
+					parent._editPathPoint('clone', $(target).parent().attr('id'));
+				}
+				
+				if(target.attr('act') == 'deletePoint'){
+					parent._editPathPoint('delete', $(target).parent().attr('id'));
+				}
+			});
+			
 	}
 	
 	editor.prototype._addShapePoint = function(){
@@ -386,6 +434,43 @@
 			
 	}
 	
+	editor.prototype._editShapePoint = function(state, id){
+		var obj = this.activeObject;
+			if(state=="up"){
+				if($('sMenu #shapePoints point#'+id).prev('point').length){
+					$('sMenu #shapePoints point#'+id).insertBefore($('sMenu #shapePoints point#'+id).prev('point'));
+					obj.shape.swap(id,parseInt(id)-1);
+				}
+			}
+			
+			if(state=="down"){
+				if($('sMenu #shapePoints point#'+id).next('point').length){
+					$('sMenu #shapePoints point#'+id).insertAfter($('sMenu #shapePoints point#'+id).next('point'));
+					
+					obj.shape.swap(parseInt(id)+1,id);
+				
+				}
+			}
+			
+			if(state=="clone"){
+				$('sMenu #shapePoints point#'+id).clone(true, true).insertAfter($('sMenu #shapePoints point#'+id));
+				obj.shape.insert(parseInt(id), obj.shape[parseInt(id)]);
+				
+			}
+			
+			if(state=="delete"){
+				$('sMenu #shapePoints point#'+id).remove();
+				obj.shape.splice(parseInt(id), 1);
+				
+			}
+
+			$.each($('sMenu #shapePoints point'), function(i){
+				$(this).attr('id', i); 
+			});
+			this._createObject('update');	
+			
+	}
+	
 	editor.prototype._addPathPoint = function(){
 			var obj = this.activeObject;
 			obj.path.push(new BABYLON.Vector3(obj.path[obj.path.length-1].x,obj.path[obj.path.length-1].y,obj.path[obj.path.length-1].z));
@@ -395,6 +480,44 @@
 			$('sMenu').find('#pathPoints point#'+lastPoint).clone(true, true).insertAfter($('sMenu').find('#pathPoints point#'+lastPoint));
 			
 			//$('sMenu #pathPoints point#'+$('sMenu #pathPoints point').length-1).clone(true, true).insertAfter($('sMenu #pathPoints point#'+$('sMenu #pathPoints point').length-1));
+			$.each($('sMenu #pathPoints point'), function(i){
+				$(this).attr('id', i); 
+			});
+			
+			this._createObject('update');	
+			
+	}
+	
+	editor.prototype._editPathPoint = function(state, id){
+		var obj = this.activeObject;
+			if(state=="up"){
+				if($('sMenu').find('#pathPoints point#'+id).prev('point').length){
+					$('sMenu').find('#pathPoints point#'+id).insertBefore($('sMenu').find('#pathPoints point#'+id).prev('point'));
+					obj.path.swap(id,parseInt(id)-1);
+				}
+			}
+			
+			if(state=="down"){
+				if($('sMenu').find('#pathPoints point#'+id).next('point').length){
+					$('sMenu').find('#pathPoints point#'+id).insertAfter($('sMenu').find('#pathPoints point#'+id).next('point'));
+					
+					obj.path.swap(parseInt(id)+1,id);
+				
+				}
+			}
+			
+			if(state=="clone"){
+				$('sMenu').find('#pathPoints point#'+id).clone(true, true).insertAfter($('sMenu').find('#pathPoints point#'+id));
+				obj.path.insert(parseInt(id), obj.path[parseInt(id)]);
+				
+			}
+			
+			if(state=="delete"){
+				$('sMenu').find('#pathPoints point#'+id).remove();
+				obj.path.splice(parseInt(id), 1);
+				
+			}
+
 			$.each($('sMenu #pathPoints point'), function(i){
 				$(this).attr('id', i); 
 			});
