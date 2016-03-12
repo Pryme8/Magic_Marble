@@ -358,7 +358,7 @@
 					
 				});
 				
-				parent.scene.actionCam.target = playerObj.MESH;
+				parent.scene.actionCam.target = playerObj.MESH.camTarget;
 				parent.scene.activeCamera = parent.scene.actionCam;
 				parent.grid.isVisible = false;
 				parent.gizmos.transform.xAxis.path.isVisible = false;
@@ -850,7 +850,9 @@
 				}
 				
 				if(obj.type == "player"){
-					obj.MESH = BABYLON.Mesh.CreateSphere("player", 12, obj.size, this.scene);	
+					obj.MESH = BABYLON.Mesh.CreateSphere("player", 12, obj.size, this.scene);
+					obj.MESH.camTarget = BABYLON.Mesh.CreateSphere("camTarget", 12, obj.size, this.scene);
+					obj.MESH.camTarget.isVisible = false;	
 				}
 				
 				if(obj.type == "particleSystem"){
@@ -958,9 +960,9 @@ var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0
 	scene.actionCam.target = BABYLON.Vector3.Zero();
 	
 	var keys = {}
-	 keys.up = false, keys.down = false, keys.left = false, keys.right = false, keys.space = false;
+	 keys.up = false, keys.down = false, keys.left = false, keys.right = false, keys.space = false, keys.w = false, keys.s = false, keys.a = false, keys.d = false;
 	function onKeyDown(evt) {
-		//console.log(evt.keyCode);
+		console.log(evt.keyCode);
     switch (evt.keyCode){
 		case 37: // left
 		keys.left = true;
@@ -976,7 +978,19 @@ var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0
 		break;
 		case 32: //space
 		keys.space = true;
-		break;	
+		break;
+		case 87: //w
+		keys.w = true;
+		break;
+		case 83: //s
+		keys.s = true;
+		break;
+		case 65: //a
+		keys.a = true;
+		break;
+		case 68: //d
+		keys.d = true;
+		break;
 	}
 	}
 		function onKeyUp(evt) {
@@ -996,6 +1010,18 @@ var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0
 		case 32: //space
 		keys.space = false;
 		break;	
+		case 87: //w
+		keys.w = false;
+		break;
+		case 83: //s
+		keys.s = false;
+		break;
+		case 65: //a
+		keys.a = false;
+		break;
+		case 68: //d
+		keys.d = false;
+		break;
 	}
 	}
 	
@@ -1005,7 +1031,8 @@ var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0
 	scene.registerBeforeRender(function(){
 		
 		if(gameSettings.state!='editor'){
-			
+			gameSettings.playerObject.camTarget.position = gameSettings.playerObject.position;
+			//console.log(gameSettings.playerObject.body.angularVelocity);
 			if(keys.left){
 			if(actionCam.spinAccel < gameSettings.camera.max_rotateSpeed.x){
 			actionCam.spinAccel += gameSettings.camera.sensitivity.x;
@@ -1063,6 +1090,36 @@ var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0
 				var jumpVector = new BABYLON.Vector3(0,6.5,0);
 				gameSettings.playerObject.applyImpulse(jumpVector, gameSettings.playerObject.position);	
 					
+			}
+			
+			if(keys.w && gameSettings.playerObject.body.grounded){
+				var forward = scene.activeCamera.position.subtract(gameSettings.playerObject.position).normalize();
+				forward.y = 0;
+				gameSettings.playerObject.applyImpulse(forward.scale(-0.05), gameSettings.playerObject.position);	
+			}else if(keys.s && gameSettings.playerObject.body.grounded){
+				var forward = scene.activeCamera.position.subtract(gameSettings.playerObject.position).normalize();
+				forward.y = 0;
+				gameSettings.playerObject.applyImpulse(forward.scale(0.05), gameSettings.playerObject.position);	
+			}
+			
+			if(keys.a && gameSettings.playerObject.body.grounded){
+								
+				var forward = scene.activeCamera.position.subtract(gameSettings.playerObject.position).normalize();
+				
+				var right =BABYLON.Vector3.Cross(forward, scene.activeCamera.upVector).normalize();
+				right.y = 0;
+
+				gameSettings.playerObject.applyImpulse(right.scale(-0.05), gameSettings.playerObject.position);	
+			}
+			
+			if(keys.d && gameSettings.playerObject.body.grounded){
+								
+				var forward = scene.activeCamera.position.subtract(gameSettings.playerObject.position).normalize();
+				
+				var right =BABYLON.Vector3.Cross(forward, scene.activeCamera.upVector).normalize();
+				right.y = 0;
+
+				gameSettings.playerObject.applyImpulse(right.scale(0.05), gameSettings.playerObject.position);	
 			}
 			
 		}
