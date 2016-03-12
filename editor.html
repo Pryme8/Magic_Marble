@@ -200,7 +200,8 @@
 			sensitivity : {x:0.1,y:0.01},
 			max_rotateSpeed : {x:5,y:1},
 			pitch_limits : {mn:-8,mx:20},
-		}
+		},
+		triggerList: [],
 	}
 	
 	
@@ -284,7 +285,39 @@
 				imposter: null,
 			}
 				
+		},
+		killZone : {
+			name : "Kill Zone XD",
+			type : "trigger",
+			subtype : "stagebounds",
+			size : {x:100,y:100,z:100},
+			offset : {
+			position: {x:0,y:25,z:0},
+			rotation: {x:0,y:0,z:0}
+				},
+			
+			trigger: {
+				func : function(player,trigger){
+						if(!player.intersectsMesh(trigger, false)){
+							gameSettings.playerObject.body.velocity.x = 0;
+							gameSettings.playerObject.body.velocity.y = 0;
+							gameSettings.playerObject.body.velocity.z = 0;
+							gameSettings.playerObject.position = gameSettings.spawnOrgin;
+							
+						
+						}
+				},
+				
+			},
+			physics :{
+				on : false,
+				mass : 0,
+				friction : 0,
+				restitution: 0,
+				imposter: null,
+				}
 		}
+		
 		
 	}
 	
@@ -350,13 +383,21 @@
 			});
 			
 			if(playerObj && objectTrigger && goalTrigger){
+				
+				
 				$.each(parent.objectList, function(i){
 					var obj = parent.objectList[i];
+
+					
 						if(obj.physics.on){
 							obj.MESH.body = obj.MESH.setPhysicsState(obj.physics.imposter, { mass: obj.physics.mass, friction: obj.physics.friction, restitution: obj.physics.restitution });
 						}
+						if(obj.type == "trigger"){
+							gameSettings.triggerList.push({func : obj.trigger.func, target : obj.MESH});
+						}
 					
 				});
+				
 				
 				parent.scene.actionCam.target = playerObj.MESH.camTarget;
 				parent.scene.activeCamera = parent.scene.actionCam;
@@ -375,6 +416,7 @@
 				playerObj.MESH.body.collisionResponse = 1;
 				 } );
 				gameSettings.playerObject = playerObj.MESH;
+				gameSettings.spawnOrgin = new BABYLON.Vector3(playerObj.offset.position.x,playerObj.offset.position.y,playerObj.offset.position.z);
 				gameSettings.state = "play";
 				
 				
@@ -752,7 +794,7 @@
 		this.activeObject.path[point] = new BABYLON.Vector3(parseFloat($('sMenu').find('#pathPoints point#'+point).children('input#point-position-x').val()),
 		parseFloat($('sMenu').find('#pathPoints point#'+point).children('input#point-position-y').val()),
 		parseFloat($('sMenu').find('#pathPoints point#'+point).children('input#point-position-z').val()));
-			console.log(this.activeObject.path);
+			//console.log(this.activeObject.path);
 			
 			this._createObject('update');
 	}
@@ -882,6 +924,22 @@
 					
 					obj.particleSystem.start();
 				}
+				
+				if(obj.type == "trigger"){
+						obj.MESH = BABYLON.Mesh.CreateBox("trigger", 1.0, this.scene);
+						obj.MESH.scaling = new BABYLON.Vector3(obj.size.x,obj.size.y,obj.size.z);
+						var triggerMat = new BABYLON.StandardMaterial("triggerMat", this.scene);
+						triggerMat.emissiveColor  = new BABYLON.Color3(1, 0.4, 0.4);
+  						triggerMat.backFaceCulling = false;
+						triggerMat.wireframe = true;
+						triggerMat.alpha = 0.6;
+		
+			  			obj.MESH.material = triggerMat;
+						
+						
+					
+				}
+				
 								
 				this.objectList.push(obj);
 				this.activeObject = obj;
@@ -1031,6 +1089,13 @@ var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0
 	scene.registerBeforeRender(function(){
 		
 		if(gameSettings.state!='editor'){
+			
+			
+					setTimeout(function(){$.each(gameSettings.triggerList, function(i,e){
+							e.func(gameSettings.playerObject, e.target);
+						});},0);
+		
+			
 			gameSettings.playerObject.camTarget.position = gameSettings.playerObject.position;
 			//console.log(gameSettings.playerObject.body.angularVelocity);
 			if(keys.left){
